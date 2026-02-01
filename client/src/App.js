@@ -8,8 +8,8 @@ const client = new ApolloClient({
 });
 
 
-const GET_USERS = gql`
-  query GetUsers {
+const GET_USERS_EMPDETAILS = gql`
+  query UserWithEmpDetails {
     users {
       id
       name
@@ -60,7 +60,7 @@ function Users() {
   const [editSalary, setEditSalary] = useState('');
 
   // Query for all users
-  const { loading: loadingAll, error: errorAll, data: dataAll, refetch: refetchAll } = useQuery(GET_USERS, {
+  const { loading: loadingAll, error: errorAll, data: dataAll, refetch: refetchAll } = useQuery(GET_USERS_EMPDETAILS, {
     skip: !!triggeredId,
   });
 
