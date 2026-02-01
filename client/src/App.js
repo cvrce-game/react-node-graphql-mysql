@@ -14,9 +14,12 @@ const GET_USERS = gql`
       id
       name
       email
+      company
+      salary
     }
   }
 `;
+
 
 const GET_USER_BY_ID = gql`
   query GetUser($id: ID!) {
@@ -24,19 +27,40 @@ const GET_USER_BY_ID = gql`
       id
       name
       email
+      company
+      salary
+    }
+  }
+`;
+
+const UPDATE_USER = gql`
+  mutation UpdateUser($id: ID!, $name: String!, $email: String!, $company: String, $salary: Float) {
+    updateUser(id: $id, name: $name, email: $email, company: $company, salary: $salary) {
+      id
+      name
+      email
+      company
+      salary
     }
   }
 `;
 
 import { useState, useEffect } from 'react';
 
+import { useMutation } from '@apollo/client';
+
 function Users() {
   const [searchId, setSearchId] = useState('');
   const [searchName, setSearchName] = useState('');
   const [triggeredId, setTriggeredId] = useState('');
+  const [editRowId, setEditRowId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editCompany, setEditCompany] = useState('');
+  const [editSalary, setEditSalary] = useState('');
 
   // Query for all users
-  const { loading: loadingAll, error: errorAll, data: dataAll } = useQuery(GET_USERS, {
+  const { loading: loadingAll, error: errorAll, data: dataAll, refetch: refetchAll } = useQuery(GET_USERS, {
     skip: !!triggeredId,
   });
 
@@ -45,6 +69,8 @@ function Users() {
     variables: { id: triggeredId },
     skip: !triggeredId,
   });
+
+  const [updateUser, { loading: updating }] = useMutation(UPDATE_USER);
 
   useEffect(() => {
     if (searchId === '') {
@@ -61,6 +87,28 @@ function Users() {
     }
   };
 
+  const handleEdit = (row) => {
+    setEditRowId(row.id);
+    setEditName(row.name);
+    setEditEmail(row.email);
+    setEditCompany(row.company || '');
+    setEditSalary(row.salary || '');
+  };
+
+  const handleSave = async (row) => {
+    await updateUser({ variables: { id: row.id, name: editName, email: editEmail, company: editCompany, salary: parseFloat(editSalary) || 0 } });
+    setEditRowId(null);
+    if (triggeredId) {
+      refetchById();
+    } else {
+      refetchAll();
+    }
+  };
+
+  const handleCancel = () => {
+    setEditRowId(null);
+  };
+
   const columns = [
     {
       name: 'ID',
@@ -69,13 +117,55 @@ function Users() {
     },
     {
       name: 'Name',
-      selector: row => row.name,
+      cell: row =>
+        editRowId === row.id ? (
+          <input value={editName} onChange={e => setEditName(e.target.value)} />
+        ) : (
+          row.name
+        ),
       sortable: true,
     },
     {
       name: 'Email',
-      selector: row => row.email,
+      cell: row =>
+        editRowId === row.id ? (
+          <input value={editEmail} onChange={e => setEditEmail(e.target.value)} />
+        ) : (
+          row.email
+        ),
       sortable: true,
+    },
+    {
+      name: 'Company',
+      cell: row =>
+        editRowId === row.id ? (
+          <input value={editCompany} onChange={e => setEditCompany(e.target.value)} />
+        ) : (
+          row.company || ''
+        ),
+      sortable: true,
+    },
+    {
+      name: 'Salary',
+      cell: row =>
+        editRowId === row.id ? (
+          <input value={editSalary} onChange={e => setEditSalary(e.target.value)} type="number" />
+        ) : (
+          row.salary !== undefined && row.salary !== null ? row.salary : ''
+        ),
+      sortable: true,
+    },
+    {
+      name: 'Actions',
+      cell: row =>
+        editRowId === row.id ? (
+          <>
+            <button onClick={() => handleSave(row)} disabled={updating}>Save</button>
+            <button onClick={handleCancel}>Cancel</button>
+          </>
+        ) : (
+          <button onClick={() => handleEdit(row)}>Edit</button>
+        ),
     },
   ];
 
